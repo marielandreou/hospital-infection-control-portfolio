@@ -1,6 +1,6 @@
 # Can earlier patient transfers help predict new infection clusters?
 
-**Complex Systems and Applications, final project (Option 1: Hospital infection control)**. Author: marielandreou
+**Complex Systems and Applications, final project (Option 1: Hospital infection control)**. Author: Maria-Gavriela Andreou
 
 **Start here:** [completed notebook](Hospital_Infection_Control_Completed.ipynb) · [PDF report](Hospital_Infection_Control_Report.pdf) · [figures](figures/)
 
