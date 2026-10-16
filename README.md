@@ -2,9 +2,11 @@
 
 **Complex Systems and Applications, final project (Option 1: Hospital infection control)**. Author: Maria-Gavriela Andreou
 
-**Start here:** [completed notebook](Hospital_Infection_Control_Completed.ipynb) · [PDF report](Hospital_Infection_Control_Report.pdf) · [figures](figures/)
+**Start here:** [project website](https://marielandreou.github.io/hospital-infection-control-portfolio/) · [completed notebook](Hospital_Infection_Control_Completed.ipynb) · [PDF report](Hospital_Infection_Control_Report.pdf) · [figures](figures/)
 
 This project models a regional hospital group as a **directed, weighted network** of wards linked by patient transfers. It tests whether that network adds predictive information about new infection clusters beyond two ward attributes. On the held-out test set the answer is clearly yes. Four further checks show that the gain is stable, that it depends on the **direction** of transfers, and where the model still fails.
+
+**Key result:** on the same 31 test wards, adding the two network features raised F1 from 0.435 to 0.737 and ROC AUC from 0.693 to 0.904, and cut false alarms from 6 to 0.
 
 > The data are synthetic teaching data. Nothing here is evidence about real hospitals or a basis for clinical decisions.
 
@@ -95,6 +97,7 @@ The infection-prevention team and ward clinicians should therefore review flags,
 | `Hospital_Infection_Control_Completed.ipynb` | Completed notebook, all cells run, outputs visible |
 | `Hospital_Infection_Control_Report.pdf` / `.html` | Exports of the notebook |
 | `figures/` | Key plots from the notebook |
+| `docs/` | The project website (GitHub Pages) |
 | `hospital_wards.csv`, `hospital_transfers.csv` | Course data (offline fallback) |
 | `requirements.txt` | Python packages |
 

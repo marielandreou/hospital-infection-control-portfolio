@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transfers and infection clusters</title>
+<meta name="description" content="Final project for Complex Systems and Applications: does a directed ward-transfer network help predict new infection clusters? By Maria-Gavriela Andreou.">
+<meta name="author" content="Maria-Gavriela Andreou">
+<meta name="color-scheme" content="light">
+<style>
+@font-face{font-family:"Atkinson Hyperlegible";src:url("fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Atkinson Hyperlegible";src:url("fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Atkinson Hyperlegible";src:url("fonts/atkinson-hyperlegible-latin-400-italic.woff2") format("woff2");font-weight:400;font-style:italic;font-display:swap}
+:root{
+  --paper:#fbfcfc; --ink:#17262d; --muted:#536570; --rule:#d8e0e4; --soft:#eef2f4;
+  --net:#2f6da0; --cluster:#c25a35; --quiet:#e2e8eb;
+  --tile:26px; --gap:5px; --group-gap:22px;
+  --wide:1040px; --text:68ch;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 18px/1.6 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--net);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+:focus-visible{outline:3px solid var(--net);outline-offset:2px;border-radius:2px}
+.wrap{max-width:var(--wide);margin:0 auto;padding:0 24px}
+.masthead{border-bottom:1px solid var(--rule)}
+.masthead .wrap{display:flex;flex-wrap:wrap;gap:8px 28px;justify-content:space-between;align-items:baseline;padding-top:18px;padding-bottom:16px;font-size:.9rem}
+.masthead p{margin:0;color:var(--muted)}
+.masthead nav{display:flex;gap:22px;flex-wrap:wrap}
+h1{font-weight:700;font-size:clamp(2.1rem,1.2rem + 3.4vw,3.45rem);line-height:1.06;letter-spacing:-.018em;max-width:21ch;margin:64px 0 22px}
+.lede{font-size:1.24rem;line-height:1.55;max-width:58ch;margin:0 0 14px}
+.byline{color:var(--muted);margin:0;font-size:.95rem}
+h2{font-size:1.5rem;line-height:1.25;margin:0 0 14px}
+section{margin-top:84px}
+section > p, section > ul, section > ol{max-width:var(--text)}
+li{margin-bottom:6px}
+.num{font-variant-numeric:tabular-nums}
+
+/* Ward board: the one bold element on the page */
+.board{margin:52px 0 0;padding:28px 0 6px;border-top:2px solid var(--ink)}
+.board-intro{max-width:var(--text);margin:0 0 26px}
+.board-intro strong{display:block;font-size:1.08rem}
+.board-tiles{display:flex;flex-wrap:wrap;gap:10px var(--group-gap)}
+.grp-wrap{width:calc(var(--n)*var(--tile) + (var(--n) - 1)*var(--gap));max-width:100%}
+.grp-label{font-size:.86rem;color:var(--muted);border-bottom:1px solid var(--rule);padding-bottom:6px;margin-bottom:10px}
+.grp-label.repeat{display:none}
+.model{margin-bottom:22px}
+.model-name{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;margin:0 0 8px}
+.model-name b{font-size:1.02rem}
+.model-name span{color:var(--muted);font-size:.92rem}
+.grp{display:flex;flex-wrap:wrap;gap:var(--gap)}
+.tile{width:var(--tile);height:var(--tile);border-radius:4px;flex:none;position:relative;cursor:default}
+.tile.tp{background:var(--cluster)}
+.tile.tp::after{content:"";position:absolute;left:34%;top:20%;width:24%;height:44%;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg)}
+.tile.fn{background:#fff;box-shadow:inset 0 0 0 2.5px var(--cluster)}
+.tile.fp{background:repeating-linear-gradient(45deg,var(--ink) 0 2px,#fff 2px 6px);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.tile.tn{background:var(--quiet)}
+.tile.on{outline:3px solid var(--net);outline-offset:2px}
+.legend{display:flex;flex-wrap:wrap;gap:10px 26px;margin:6px 0 0;padding:0;list-style:none;font-size:.9rem;color:var(--muted)}
+.legend li{display:flex;align-items:center;gap:9px;margin:0}
+.legend .tile{--tile:18px}
+.detail{min-height:3.3em;margin:18px 0 0;padding:12px 16px;background:var(--soft);border-left:3px solid var(--net);max-width:var(--text);font-size:.98rem}
+
+figure.plot{margin:26px 0 0;max-width:var(--wide)}
+figure.plot img{display:block;width:100%;height:auto;background:#fff;border:1px solid var(--rule);border-radius:6px;padding:10px}
+figure.plot a.zoom{display:block}
+.tap{display:none}
+figure.plot figcaption{font-size:.9rem;color:var(--muted);margin-top:10px;max-width:var(--text)}
+.table-wrap{overflow-x:auto;max-width:var(--wide)}
+table{border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:560px;margin-top:6px}
+th,td{padding:9px 18px 9px 0;text-align:right;border-bottom:1px solid var(--rule);vertical-align:baseline}
+th:first-child,td:first-child{text-align:left}
+thead th{font-size:.88rem;color:var(--muted);font-weight:400;border-bottom:1.5px solid var(--ink)}
+tbody tr.b td{font-weight:700}
+.limits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 48px;max-width:860px}
+.limits h3{font-size:1.05rem;margin:0 0 6px}
+.limits p{margin:0}
+footer{margin-top:96px;border-top:1px solid var(--rule);padding:22px 0 48px;color:var(--muted);font-size:.88rem}
+footer p{max-width:var(--text);margin:0 0 8px}
+
+@media (max-width:720px){
+  :root{--tile:19px;--gap:4px;--group-gap:16px}
+  .grp-label.repeat{display:block}
+  .tap{display:inline}
+  .limits{grid-template-columns:1fr}
+  table{min-width:0;font-size:.84rem}
+  th,td{padding:8px 10px 8px 0}
+  body{font-size:17px}
+  .wrap{padding:0 16px}
+  h1{margin-top:40px}
+  section{margin-top:64px}
+}
+@media (max-width:440px){
+  :root{--tile:15px;--gap:3px}
+  .tile.tp::after{border-width:0 2px 2px 0}
+  .legend .tile{--tile:16px}
+}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap">
+    <p>Complex Systems and Applications, final project</p>
+    <nav aria-label="Project files">
+      <a href="https://github.com/marielandreou/hospital-infection-control-portfolio/blob/main/Hospital_Infection_Control_Completed.ipynb">Notebook</a>
+      <a href="https://github.com/marielandreou/hospital-infection-control-portfolio/blob/main/Hospital_Infection_Control_Report.pdf">PDF report</a>
+      <a href="https://github.com/marielandreou/hospital-infection-control-portfolio">Code and data</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Can earlier patient transfers help predict new infection clusters?</h1>
+  <p class="lede">Yes, in this synthetic hospital network. Adding two features from a directed ward-transfer network to a logistic regression raised ROC AUC from 0.693 to 0.904 and F1 from 0.435 to 0.737 on the same 31 test wards, and removed every false alarm.</p>
+  <p class="byline">By Maria-Gavriela Andreou, October 2026</p>
+
+  <figure class="board" aria-labelledby="board-title">
+    <div class="board-intro" id="board-title">
+      <strong>The 31 test wards, scored by both models</strong>
+      Each square is one ward and keeps the same position in both rows, so you can follow a ward from one model to the other. A ward is flagged when its predicted probability is 0.5 or higher.
+    </div>
+    <div class="model">
+      <p class="model-name"><b>Ward attributes only</b><span class="num">5 caught, 7 missed, 6 false alarms</span></p>
+      <div class="board-tiles"><div class="grp-wrap" style="--n:12"><div class="grp-label" aria-hidden="true">Later had a new cluster (12)</div><div class="grp"><span class="tile tp" data-ward="W065" aria-label="W065, later had a new cluster: caught" tabindex="0"></span><span class="tile tp" data-ward="W039" aria-label="W039, later had a new cluster: caught" tabindex="0"></span><span class="tile fn" data-ward="W012" aria-label="W012, later had a new cluster: missed" tabindex="0"></span><span class="tile fn" data-ward="W110" aria-label="W110, later had a new cluster: missed" tabindex="0"></span><span class="tile tp" data-ward="W054" aria-label="W054, later had a new cluster: caught" tabindex="0"></span><span class="tile fn" data-ward="W009" aria-label="W009, later had a new cluster: missed" tabindex="0"></span><span class="tile tp" data-ward="W011" aria-label="W011, later had a new cluster: caught" tabindex="0"></span><span class="tile tp" data-ward="W004" aria-label="W004, later had a new cluster: caught" tabindex="0"></span><span class="tile fn" data-ward="W070" aria-label="W070, later had a new cluster: missed" tabindex="0"></span><span class="tile fn" data-ward="W099" aria-label="W099, later had a new cluster: missed" tabindex="0"></span><span class="tile fn" data-ward="W071" aria-label="W071, later had a new cluster: missed" tabindex="0"></span><span class="tile fn" data-ward="W030" aria-label="W030, later had a new cluster: missed" tabindex="0"></span></div></div><div class="grp-wrap" style="--n:19"><div class="grp-label" aria-hidden="true">No later cluster (19)</div><div class="grp"><span class="tile fp" data-ward="W046" aria-label="W046, no later cluster: false alarm" tabindex="0"></span><span class="tile fp" data-ward="W050" aria-label="W050, no later cluster: false alarm" tabindex="0"></span><span class="tile fp" data-ward="W086" aria-label="W086, no later cluster: false alarm" tabindex="0"></span><span class="tile fp" data-ward="W074" aria-label="W074, no later cluster: false alarm" tabindex="0"></span><span class="tile fp" data-ward="W013" aria-label="W013, no later cluster: false alarm" tabindex="0"></span><span class="tile tn" data-ward="W103" aria-label="W103, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile fp" data-ward="W075" aria-label="W075, no later cluster: false alarm" tabindex="0"></span><span class="tile tn" data-ward="W092" aria-label="W092, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W095" aria-label="W095, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W040" aria-label="W040, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W100" aria-label="W100, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W120" aria-label="W120, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W056" aria-label="W056, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W082" aria-label="W082, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W023" aria-label="W023, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W037" aria-label="W037, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W069" aria-label="W069, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W097" aria-label="W097, no later cluster: correctly not flagged" tabindex="0"></span><span class="tile tn" data-ward="W101" aria-label="W101, no later cluster: correctly not flagged" tabindex="0"></span></div></div></div>
+    </div>
+    <div class="model">
+      <p class="model-name"><b>With the transfer network</b><span class="num">7 caught, 5 missed, 0 false alarms</span></p>
+      <div class="board-tiles"><div class="grp-wrap" style="--n:12"><div class="grp-label repeat" aria-hidden="true">Later had a new cluster (12)</div><div class="grp"><span class="tile tp" data-ward="W065" aria-label="W065, later had a new cluster: caught"></span><span class="tile tp" data-ward="W039" aria-label="W039, later had a new cluster: caught"></span><span class="tile tp" data-ward="W012" aria-label="W012, later had a new cluster: caught"></span><span class="tile tp" data-ward="W110" aria-label="W110, later had a new cluster: caught"></span><span class="tile tp" data-ward="W054" aria-label="W054, later had a new cluster: caught"></span><span class="tile tp" data-ward="W009" aria-label="W009, later had a new cluster: caught"></span><span class="tile tp" data-ward="W011" aria-label="W011, later had a new cluster: caught"></span><span class="tile fn" data-ward="W004" aria-label="W004, later had a new cluster: missed"></span><span class="tile fn" data-ward="W070" aria-label="W070, later had a new cluster: missed"></span><span class="tile fn" data-ward="W099" aria-label="W099, later had a new cluster: missed"></span><span class="tile fn" data-ward="W071" aria-label="W071, later had a new cluster: missed"></span><span class="tile fn" data-ward="W030" aria-label="W030, later had a new cluster: missed"></span></div></div><div class="grp-wrap" style="--n:19"><div class="grp-label repeat" aria-hidden="true">No later cluster (19)</div><div class="grp"><span class="tile tn" data-ward="W046" aria-label="W046, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W050" aria-label="W050, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W086" aria-label="W086, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W074" aria-label="W074, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W013" aria-label="W013, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W103" aria-label="W103, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W075" aria-label="W075, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W092" aria-label="W092, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W095" aria-label="W095, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W040" aria-label="W040, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W100" aria-label="W100, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W120" aria-label="W120, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W056" aria-label="W056, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W082" aria-label="W082, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W023" aria-label="W023, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W037" aria-label="W037, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W069" aria-label="W069, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W097" aria-label="W097, no later cluster: correctly not flagged"></span><span class="tile tn" data-ward="W101" aria-label="W101, no later cluster: correctly not flagged"></span></div></div></div>
+    </div>
+    <ul class="legend">
+      <li><span class="tile tp"></span>Cluster caught</li>
+      <li><span class="tile fn"></span>Cluster missed</li>
+      <li><span class="tile fp"></span>False alarm</li>
+      <li><span class="tile tn"></span>Correctly not flagged</li>
+    </ul>
+    <p class="detail" id="detail" aria-live="polite">Point at a ward, or tab through the top row, to compare the two models for that ward.</p>
+  </figure>
+
+  <section aria-labelledby="q">
+    <h2 id="q">What was asked</h2>
+    <p>At the observation point, 18 of the 120 wards in a regional hospital group already have an active infection cluster. For the other 102, the project asks whether knowing where patients came from in the previous 14 days helps predict which wards report a new cluster in the following 14 days.</p>
+    <p>The baseline uses only what is known about each ward itself: bed occupancy and the share of patients with an invasive device. Wards that later had a cluster score higher on both on average, but the two groups overlap heavily.</p>
+  </section>
+
+  <section aria-labelledby="net">
+    <h2 id="net">The transfer network</h2>
+    <p>Wards are nodes, and the 420 recorded transfer routes are directed links weighted by the number of patients moved (1 to 9). Two features come from the network. Both use only information available at the observation point:</p>
+    <ul>
+      <li><b>Incoming volume</b>: every patient a ward received.</li>
+      <li><b>Exposure</b>: patients received from the 18 wards that already had a cluster. Most wards (65 of 102) received none.</li>
+    </ul>
+    <figure class="plot">
+      <a class="zoom" href="figures/02_transfer_network_and_exposure.png"><img src="figures/02_transfer_network_and_exposure.png" width="1240" height="509" alt="Left: network of the 35 wards with the largest incoming volume, with three wards active at the start and their outgoing transfers highlighted. Right: histogram showing 65 of 102 eligible wards received no transfers from active wards."></a>
+      <figcaption><span class="tap">Tap a figure to open it full size. </span>Colour shows only the status at the observation point, never the later outcome. The drawing shows 35 wards for readability; the features use all 120 wards and all 420 links.</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="fair">
+    <h2 id="fair">Keeping the comparison fair</h2>
+    <ol>
+      <li>Make one stratified 70/30 split of the 102 eligible wards: 71 for training and 31 for testing, the same for both models.</li>
+      <li>Learn the feature scaling inside a pipeline, from the training wards only.</li>
+      <li>Use the later outcome only as the target, never to build a feature.</li>
+      <li>Score both models on accuracy, F1 for the cluster class, ROC AUC from predicted probabilities, and a confusion matrix.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="res">
+    <h2 id="res">Results on the test wards</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Model</th><th scope="col">Accuracy</th><th scope="col">F1</th><th scope="col">ROC AUC</th><th scope="col">False alarms</th><th scope="col">Missed clusters</th></tr></thead>
+        <tbody>
+          <tr><td>Ward attributes only</td><td>0.581</td><td>0.435</td><td>0.693</td><td>6 of 19</td><td>7 of 12</td></tr>
+          <tr class="b"><td>With the transfer network</td><td>0.839</td><td>0.737</td><td>0.904</td><td>0 of 19</td><td>5 of 12</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>All three scores improve, so the result is clear rather than mixed. The network model still misses 5 of the 12 clusters.</p>
+  </section>
+
+  <section aria-labelledby="real">
+    <h2 id="real">Is the gain real?</h2>
+    <p>A single split of 31 wards is fragile: one ward changing class moves F1 by about 0.06. I repeated the comparison over 100 cross-validation folds and added two placebo features that should not help.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Features added to the ward attributes</th><th scope="col">Mean ROC AUC</th><th scope="col">Gain</th><th scope="col">Folds better than baseline</th></tr></thead>
+        <tbody>
+          <tr><td>None (baseline)</td><td>0.720</td><td></td><td></td></tr>
+          <tr><td>Incoming volume</td><td>0.862</td><td>+0.142</td><td>96%</td></tr>
+          <tr><td>Exposure</td><td>0.864</td><td>+0.144</td><td>100%</td></tr>
+          <tr class="b"><td>Both network features</td><td>0.895</td><td>+0.175</td><td>98%</td></tr>
+          <tr><td>Placebo: patients sent to active wards</td><td>0.739</td><td>+0.019</td><td>59%</td></tr>
+          <tr><td>Placebo: network features shuffled</td><td>0.708</td><td>&minus;0.013</td><td>34%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li><b>The gain is stable.</b> The folds reuse the same wards, so this is a stability check rather than a significance test.</li>
+      <li><b>Direction matters.</b> Reversing the links barely helps, and shuffled features do not help at all, so the gain is not just an effect of adding columns.</li>
+      <li><b>The model recovers the known rule.</b> Its coefficients rank exposure first and incoming volume last, the same order as the published rule that generated the data.</li>
+    </ul>
+    <figure class="plot">
+      <a class="zoom" href="figures/04_robustness_ablation_placebo.png"><img src="figures/04_robustness_ablation_placebo.png" width="1245" height="430" alt="Left: ROC AUC across 100 folds for each feature set; both network features are clearly above the baseline and the two placebos. Right: coefficients of the network model, largest for exposure to active wards."></a>
+    </figure>
+  </section>
+
+  <section aria-labelledby="fail">
+    <h2 id="fail">Where it still fails</h2>
+    <p>All five clusters the network model missed were in wards with little or no recorded exposure. Clusters that arise away from the transfer routes look like ordinary wards to it. Lowering the decision threshold to 0.25, chosen on training wards only, would cut missed clusters on the test set from 5 to 2 at the cost of 4 false alarms. That balance is a policy decision for an infection-prevention team, not a property of the model.</p>
+    <figure class="plot">
+      <a class="zoom" href="figures/05_threshold_tradeoff.png"><img src="figures/05_threshold_tradeoff.png" width="1226" height="350" alt="Left: missed clusters rise and false alarms fall as the decision threshold increases, on training folds. Right: test-set confusion matrices at thresholds 0.50 and 0.25."></a>
+    </figure>
+  </section>
+
+  <section aria-labelledby="limits">
+    <h2 id="limits">What this does not show</h2>
+    <div class="limits">
+      <div><h3>No causation</h3><p>A transfer link is not an infection route. A better score cannot show that transfers caused clusters.</p></div>
+      <div><h3>No clinical use</h3><p>The data are small, synthetic and generated from these very features. Nothing here could guide decisions in a real hospital.</p></div>
+      <div><h3>Uneven errors</h3><p>False alarms divert screening, isolation beds and staff time. Missed clusters leave patients and staff unprotected, and they fall mostly on wards outside the main transfer routes.</p></div>
+      <div><h3>Human review</h3><p>Any flags should be reviewed by infection-prevention staff and ward clinicians, with errors audited across ward types.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="refl">
+    <h2 id="refl">Reflection</h2>
+    <p>Building the comparison as a single pipeline made it fair by construction. The placebo checks were the most useful addition, because they turned "the score went up" into evidence that the gain depends on who sent the patients. The hardest part was judging the size of the gain from 31 test wards. With more time I would validate on a later time period, try exposure measures that follow longer transfer chains, and calibrate the probabilities.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Data: the synthetic course files <code>hospital_wards.csv</code> and <code>hospital_transfers.csv</code>. They contain no real patients or hospitals.</p>
+    <p><a href="https://github.com/marielandreou/hospital-infection-control-portfolio/blob/main/Hospital_Infection_Control_Completed.ipynb">Notebook</a>, <a href="https://github.com/marielandreou/hospital-infection-control-portfolio/blob/main/Hospital_Infection_Control_Report.pdf">PDF report</a> and <a href="https://github.com/marielandreou/hospital-infection-control-portfolio">code and data</a> on GitHub.</p>
+  </div>
+</footer>
+
+<script>
+const wards = [{"id": "W065", "y": 1, "pA": 0.57, "pB": 0.98, "inc": 34, "exp": 14}, {"id": "W039", "y": 1, "pA": 0.73, "pB": 0.93, "inc": 23, "exp": 8}, {"id": "W012", "y": 1, "pA": 0.47, "pB": 0.85, "inc": 21, "exp": 9}, {"id": "W110", "y": 1, "pA": 0.46, "pB": 0.79, "inc": 12, "exp": 9}, {"id": "W054", "y": 1, "pA": 0.71, "pB": 0.78, "inc": 47, "exp": 0}, {"id": "W009", "y": 1, "pA": 0.44, "pB": 0.68, "inc": 26, "exp": 6}, {"id": "W011", "y": 1, "pA": 0.81, "pB": 0.65, "inc": 13, "exp": 0}, {"id": "W004", "y": 1, "pA": 0.58, "pB": 0.48, "inc": 30, "exp": 0}, {"id": "W070", "y": 1, "pA": 0.32, "pB": 0.38, "inc": 12, "exp": 5}, {"id": "W099", "y": 1, "pA": 0.46, "pB": 0.33, "inc": 28, "exp": 0}, {"id": "W071", "y": 1, "pA": 0.13, "pB": 0.18, "inc": 43, "exp": 2}, {"id": "W030", "y": 1, "pA": 0.23, "pB": 0.15, "inc": 25, "exp": 0}, {"id": "W046", "y": 0, "pA": 0.71, "pB": 0.43, "inc": 8, "exp": 0}, {"id": "W050", "y": 0, "pA": 0.66, "pB": 0.41, "inc": 9, "exp": 0}, {"id": "W086", "y": 0, "pA": 0.69, "pB": 0.35, "inc": 1, "exp": 0}, {"id": "W074", "y": 0, "pA": 0.55, "pB": 0.27, "inc": 7, "exp": 0}, {"id": "W013", "y": 0, "pA": 0.57, "pB": 0.24, "inc": 5, "exp": 0}, {"id": "W103", "y": 0, "pA": 0.23, "pB": 0.23, "inc": 19, "exp": 4}, {"id": "W075", "y": 0, "pA": 0.56, "pB": 0.23, "inc": 0, "exp": 0}, {"id": "W092", "y": 0, "pA": 0.28, "pB": 0.16, "inc": 20, "exp": 0}, {"id": "W095", "y": 0, "pA": 0.24, "pB": 0.15, "inc": 13, "exp": 2}, {"id": "W040", "y": 0, "pA": 0.43, "pB": 0.15, "inc": 3, "exp": 0}, {"id": "W100", "y": 0, "pA": 0.31, "pB": 0.14, "inc": 12, "exp": 0}, {"id": "W120", "y": 0, "pA": 0.31, "pB": 0.14, "inc": 19, "exp": 0}, {"id": "W056", "y": 0, "pA": 0.26, "pB": 0.12, "inc": 18, "exp": 0}, {"id": "W082", "y": 0, "pA": 0.33, "pB": 0.12, "inc": 13, "exp": 0}, {"id": "W023", "y": 0, "pA": 0.18, "pB": 0.08, "inc": 16, "exp": 0}, {"id": "W037", "y": 0, "pA": 0.1, "pB": 0.07, "inc": 20, "exp": 2}, {"id": "W069", "y": 0, "pA": 0.2, "pB": 0.05, "inc": 3, "exp": 0}, {"id": "W097", "y": 0, "pA": 0.16, "pB": 0.04, "inc": 1, "exp": 0}, {"id": "W101", "y": 0, "pA": 0.14, "pB": 0.04, "inc": 5, "exp": 0}];
+const byId = Object.fromEntries(wards.map(w => [w.id, w]));
+const detail = document.getElementById('detail');
+const verdict = (y, p) => y ? (p >= 0.5 ? 'caught' : 'missed') : (p >= 0.5 ? 'false alarm' : 'correctly not flagged');
+const fmt = p => p.toFixed(2);
+function show(id) {
+  document.querySelectorAll('.tile.on').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.board-tiles [data-ward="' + id + '"]').forEach(t => t.classList.add('on'));
+  const w = byId[id];
+  detail.textContent = w.id + (w.y ? ' later had a new cluster. ' : ' had no later cluster. ') +
+    'Ward attributes only: ' + verdict(w.y, w.pA) + ' (probability ' + fmt(w.pA) + '). ' +
+    'With the transfer network: ' + verdict(w.y, w.pB) + ' (probability ' + fmt(w.pB) + '). ' +
+    'It received ' + w.inc + ' transfers, ' + w.exp + ' of them from wards with an active cluster.';
+}
+document.querySelectorAll('.board-tiles .tile').forEach(t => {
+  t.addEventListener('mouseenter', () => show(t.dataset.ward));
+  t.addEventListener('focus', () => show(t.dataset.ward));
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+# The HTML file is an export of the notebook, and docs/ is the project website,
+# so neither should count towards the repository's language statistics.
+*.html linguist-generated=true
+docs/** linguist-documentation=true
